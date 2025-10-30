@@ -1,0 +1,81 @@
+// Prisma 스키마 파일
+// PostgreSQL 데이터베이스 연결 설정
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 교사 테이블
+model Teacher {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String   // 실제 프로덕션에서는 해시된 비밀번호를 저장해야 합니다
+  subject   String?  // 담당 과목
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 관계: 한 명의 교사는 여러 학생을 가질 수 있습니다
+  students  Student[]
+
+  @@map("teachers")
+}
+
+// 학생 테이블
+model Student {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String   // 실제 프로덕션에서는 해시된 비밀번호를 저장해야 합니다
+  grade     Int?     // 학년
+  className String?  // 반 이름
+  phone     String?
+  birthDate DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 외래 키: 학생은 한 명의 교사에게 속합니다
+  teacherId String
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // 관계: 한 명의 학생은 여러 감정 기록을 가질 수 있습니다
+  emotionLogs EmotionLog[]
+
+  @@index([teacherId])
+  @@map("students")
+}
+
+// 감정 기록 테이블
+model EmotionLog {
+  id          String   @id @default(cuid())
+  
+  // 감정 정보
+  emotion     String   // 감정 유형 (예: "행복", "슬픔", "화남", "불안", "평온" 등)
+  intensity   Int      @default(5) // 감정 강도 (1-10)
+  reason      String?  // 감정을 느낀 이유 (선택적 텍스트)
+  note        String?  // 추가 메모
+  
+  // 컨텍스트 정보
+  context     String?  // 상황 (예: "수업 중", "쉬는 시간", "집", "친구와 함께" 등)
+  activity    String?  // 활동 (예: "공부", "운동", "게임", "대화" 등)
+  
+  // 시간 정보
+  loggedAt    DateTime @default(now()) // 감정을 기록한 시간
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 외래 키: 감정 기록은 한 명의 학생에게 속합니다
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([loggedAt])
+  @@index([emotion])
+  @@map("emotion_logs")
+}
